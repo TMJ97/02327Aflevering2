@@ -5,7 +5,6 @@ import dal.dto.UserDTO;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class UserDAOImpls185027 implements IUserDAO {
@@ -23,28 +22,45 @@ public class UserDAOImpls185027 implements IUserDAO {
         try {
             Connection con = createConnection();
             IUserDTO user = new UserDTO();
-            Statement stmt = con.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM UserDTO WHERE userID = " + userId + ";");
-            if (rs.next()) {
-                user = makeUserFromRs(rs);
+            Statement userStatement = con.createStatement();
+            ResultSet userRS = userStatement.executeQuery("SELECT * FROM s185027.users WHERE userID = " + userId + ";");
+            if (userRS.next()) {
+                user.setUserId(userRS.getInt("userID"));
+                user.setUserName(userRS.getString("userName"));
+                user.setIni(userRS.getString("userIni"));
             }
+
+            Statement roleStatement = con.createStatement();
+            ResultSet roleRS = roleStatement.executeQuery("SELECT roleName FROM s185027.isAssigned NATURAL LEFT JOIN roles WHERE userID = " + userId + ";");
+            while (roleRS.next()) {
+               user.addRole(roleRS.getString("roleName"));
+            }
+
             return user;
         } catch (SQLException e) {
             throw new DALException(e.getMessage());
         }
     }
 
-
-
     @Override
     public List<IUserDTO> getUserList() throws DALException {
         try {
             Connection con = createConnection();
             Statement stmt = con.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM UserDTO;");
+            ResultSet userRS = stmt.executeQuery("SELECT * FROM s185027.users;");
             List<IUserDTO> userList = new ArrayList<>();
-            while (rs.next()) {
-                IUserDTO user = makeUserFromRs(rs);
+            while (userRS.next()) {
+                IUserDTO user = new UserDTO();
+                user.setUserId(userRS.getInt("userID"));
+                user.setUserName(userRS.getString("userName"));
+                user.setIni(userRS.getString("userIni"));
+
+                Statement roleStatement = con.createStatement();
+                ResultSet roleRS = roleStatement.executeQuery("SELECT roleName FROM s185027.isAssigned NATURAL LEFT JOIN roles " +
+                        "WHERE userID = " + userRS.getInt("userID") + ";");
+                while (roleRS.next()) {
+                    user.addRole(roleRS.getString("roleName"));
+                }
                 userList.add(user);
             }
             return userList;
@@ -58,9 +74,16 @@ public class UserDAOImpls185027 implements IUserDAO {
         try {
             Connection con = createConnection();
             Statement stmt = con.createStatement();
-            String roleString = String.join(";", user.getRoles());
-            stmt.executeUpdate("INSERT INTO UserDTO (userID, userName, ini, roles)" +
-                    " VALUES (" + user.getUserId() + ", '" + user.getUserName() + "', '" + user.getIni() + "', '" + roleString + "');");
+            stmt.executeUpdate("INSERT INTO s185027.users (userID, userName, userIni) " +
+                    "VALUES (" + user.getUserId() + ", '" + user.getUserName() + "', '" + user.getIni() + "');");
+
+            for (String role: user.getRoles()) {
+                int random = (int)Math.floor(Math.random() * 2000000000);
+                stmt.executeUpdate("INSERT INTO s185027.roles (roleID, roleName) " +
+                        "VALUES (" + random + ", '" + role + "');");
+
+                stmt.executeUpdate("INSERT INTO s185027.isAssigned VALUES (" + user.getUserId() + ", " + random + ");");
+            }
         } catch (SQLException e) {
             throw new DALException(e.getMessage());
         }
@@ -91,20 +114,5 @@ public class UserDAOImpls185027 implements IUserDAO {
         } catch (SQLException e) {
             throw new DALException(e.getMessage());
         }
-    }
-
-    private IUserDTO makeUserFromRs(ResultSet rs) throws SQLException {
-        IUserDTO user = new UserDTO();
-        user.setUserId(rs.getInt("userId"));
-        user.setUserName(rs.getString("userName"));
-        user.setIni(rs.getString("ini"));
-        //Extract roles as String
-        String roleString = rs.getString("roles");
-        //Split string by ;
-        String[] roleArray = roleString.split(";");
-        //Convert to List
-        List<String> roleList = Arrays.asList(roleArray);
-        user.setRoles(roleList);
-        return user;
     }
 }
