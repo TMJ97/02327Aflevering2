@@ -73,14 +73,20 @@ public class UserDAOImpls185027 implements IUserDAO {
     public void createUser(IUserDTO user) throws DALException {
         try {
             Connection con = createConnection();
-            Statement stmt = con.createStatement();
-            stmt.executeUpdate("INSERT INTO s185027.users (userID, userName, userIni) " +
-                    "VALUES (" + user.getUserId() + ", '" + user.getUserName() + "', '" + user.getIni() + "');");
+            PreparedStatement stmt = con.prepareStatement("INSERT INTO s185027.users (userID, userName, userIni) " +
+                    "VALUES (?, ?, ?);");
+            stmt.setInt(1,user.getUserId());
+            stmt.setString(2,user.getUserName());
+            stmt.setString(3,user.getIni());
+            stmt.executeUpdate();
 
             for (String role: user.getRoles()) {
                 int random = (int)Math.floor(Math.random() * 2000000000);
-                stmt.executeUpdate("INSERT INTO s185027.roles (roleID, roleName) " +
-                        "VALUES (" + random + ", '" + role + "');");
+                PreparedStatement stmt2 = con.prepareStatement("INSERT INTO s185027.roles (roleID, roleName) " +
+                        "VALUES (?, ?);");
+                stmt2.setInt(1,random);
+                stmt2.setString(2,role);
+                stmt2.executeUpdate();
 
                 stmt.executeUpdate("INSERT INTO s185027.isAssigned VALUES (" + user.getUserId() + ", " + random + ");");
             }
@@ -93,11 +99,11 @@ public class UserDAOImpls185027 implements IUserDAO {
     public void updateUser(IUserDTO user) throws DALException {
         try {
             Connection con = createConnection();
-            Statement stmt = con.createStatement();
-            stmt.execute("UPDATE s185027.users SET " +
-                    "userName = '" + user.getUserName() + "', " +
-                    "userIni = '" + user.getIni() + "' " +
-                    "WHERE userID = " + user.getUserId());
+            PreparedStatement stmt = con.prepareStatement("UPDATE s185027.users SET userName = ?, userIni = ?  WHERE userID = ?");
+            stmt.setString(1,user.getUserName());
+            stmt.setString(2,user.getIni());
+            stmt.setInt(3,user.getUserId());
+            stmt.executeUpdate();
 
             ResultSet rs = stmt.executeQuery("SELECT * FROM s185027.isAssigned WHERE userID =" + user.getUserId() + ";");
             while (rs.next()) {
@@ -108,8 +114,11 @@ public class UserDAOImpls185027 implements IUserDAO {
 
             for (String role: user.getRoles()) {
                 int random = (int)Math.floor(Math.random() * 2000000000);
-                stmt.executeUpdate("INSERT INTO s185027.roles (roleID, roleName) " +
-                        "VALUES (" + random + ", '" + role + "');");
+                PreparedStatement stmt2 = con.prepareStatement("INSERT INTO s185027.roles (roleID, roleName) " +
+                        "VALUES (?, ?);");
+                stmt2.setInt(1,random);
+                stmt2.setString(2,role);
+                stmt2.executeUpdate();
 
                 stmt.executeUpdate("INSERT INTO s185027.isAssigned VALUES (" + user.getUserId() + ", " + random + ");");
             }
