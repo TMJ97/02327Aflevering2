@@ -94,12 +94,25 @@ public class UserDAOImpls185027 implements IUserDAO {
         try {
             Connection con = createConnection();
             Statement stmt = con.createStatement();
-            String roleString = String.join(";", user.getRoles());
-            stmt.execute("UPDATE UserDTO SET " +
+            stmt.execute("UPDATE s185027.users SET " +
                     "userName = '" + user.getUserName() + "', " +
-                    "ini = '" + user.getIni() + "', " +
-                    "roles = '" + roleString + "' " +
-                    "WHERE userId = " + user.getUserId());
+                    "userIni = '" + user.getIni() + "' " +
+                    "WHERE userID = " + user.getUserId());
+
+            ResultSet rs = stmt.executeQuery("SELECT * FROM s185027.isAssigned WHERE userID =" + user.getUserId() + ";");
+            while (rs.next()) {
+                Statement deepStatement = con.createStatement();
+                int roleID = rs.getInt("roleID");
+                deepStatement.executeUpdate("DELETE FROM s185027.roles WHERE roleID = " + roleID + ";");
+            }
+
+            for (String role: user.getRoles()) {
+                int random = (int)Math.floor(Math.random() * 2000000000);
+                stmt.executeUpdate("INSERT INTO s185027.roles (roleID, roleName) " +
+                        "VALUES (" + random + ", '" + role + "');");
+
+                stmt.executeUpdate("INSERT INTO s185027.isAssigned VALUES (" + user.getUserId() + ", " + random + ");");
+            }
         } catch (SQLException e) {
             throw new DALException(e.getMessage());
         }
@@ -110,7 +123,14 @@ public class UserDAOImpls185027 implements IUserDAO {
         try {
             Connection con = createConnection();
             Statement stmt = con.createStatement();
-            stmt.executeUpdate("DELETE FROM UserDTO WHERE userID = " + userId + ";");
+
+            ResultSet rs = stmt.executeQuery("SELECT * FROM s185027.isAssigned WHERE userID =" + userId + ";");
+            while (rs.next()) {
+                Statement deepStatement = con.createStatement();
+                deepStatement.executeUpdate("DELETE FROM s185027.roles WHERE roleID = " + rs.getInt("roleID") + ";");
+            }
+
+            stmt.executeUpdate("DELETE FROM s185027.users WHERE userID = " + userId + ";");
         } catch (SQLException e) {
             throw new DALException(e.getMessage());
         }
